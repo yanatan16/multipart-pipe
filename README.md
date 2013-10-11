@@ -100,6 +100,13 @@ When using `pipe.s3(s3_knox_client, opts)`, there are additional options:
     app.use(pipe({streamer: streamer}))
     ```
 
+- Restrict the middleware to a specific path
+
+    ```javascript
+    app.use('/upload', express.multipart({defer: true}))
+    app.use('/upload', pipe.s3(s3, opts))
+    ```
+
 # License
 
 MIT in LICENSE file.
