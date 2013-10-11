@@ -15,19 +15,21 @@ npm install multipart-pipe
 
 ```javascript
 var pipe = require('multipart-pipe'),
-  app = express(), /* or connect() */
-  s3_options = {
+  knox = require('knox'),
+  express = require('express')
+
+var app = express(), /* or connect() */
+  s3 = knox.createClient({
     bucket: my_bucket,
     key: my_key,
-    secret: my_secret,
-    headers: { 'x-amz-acl': 'public-read' }
-  }
+    secret: my_secret
+  })
 
 // This is very important
 app.use(express.multipart({ defer: true }))
 
 // Pipes to S3
-app.use(pipe.s3(s3_knox_options))
+app.use(pipe.s3(s3))
 ```
 
 ## Options
@@ -35,13 +37,13 @@ app.use(pipe.s3(s3_knox_options))
 The main way to instantiate the middleware is `pipe(options)` where options contains the following:
 
 - `streamer` - Required `function (part, filename, callback)`
-  - Optionally call `pipe.s3(s3options, options)` to use built-in S3 streamer
+  - Optionally call `pipe.s3(s3_knox_client, options)` to use built-in S3 streamer
 - `content-type` - Optional `String` or `RegExp` to test each part's content-type header for acceptability
 - `filename` - Optional `function (part_filename)` which returns a filename to store. Defaults to `uuid.v4() + path.extname(part_filename)`
 
 ### S3 Options
 
-The S3 options passed to `pipe.s3(s3opts, opts)` should look like normal `knox.createClient(options)` ([docs](https://github.com/LearnBoost/knox)) with the addition of:
+When using `pipe.s3(s3_knox_client, opts)`, there are additional options:
 
 - `headers` - Optional object with default headers for each upload to S3. Defaults to enabling public-read.
 
@@ -56,9 +58,31 @@ The S3 options passed to `pipe.s3(s3opts, opts)` should look like normal `knox.c
 - Limit content types (to say, just images):
 
     ```javascript
-    app.use(pipe({
+    app.use(pipe.s3(s3, {
       'content-type': /^image\/.*$/
     }))
+    ```
+
+- Use uploaded filename with counter prepended:
+
+    ```javascript
+    var counter = 0;
+    app.use(pipe.s3(s3, {
+      filename: function (fn) {
+        return (counter++) + '_' + fn
+      }
+    }))
+    ```
+
+- Create your own streamer function
+
+    ```javascript
+    function streamer(part, filename, callback) {
+      // see source s3streamer() for example
+    }
+
+    app.use(pipe({streamer: streamer}))
+    ```
 
 # License
 

@@ -9,7 +9,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "uuid": "~1.4.1",
-    "knox": "~0.8.6"
+    "uuid": "~1.4.1"
   }
 }

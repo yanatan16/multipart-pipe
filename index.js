@@ -5,8 +5,7 @@
 var path = require('path')
 
 // vendor
-var uuid = require('uuid'),
-  knox = require('knox')
+var uuid = require('uuid')
 
 module.exports = pipe
 
@@ -53,8 +52,8 @@ function pipe(options) {
   }
 }
 
-pipe.s3 = function pipes3(s3opts, opts) {
-  opts.streamer = s3streamer(s3opts)
+pipe.s3 = function pipes3(s3, opts) {
+  opts.streamer = s3streamer(s3, opts)
   return pipe(opts)
 }
 
@@ -74,9 +73,8 @@ function defaults(opts) {
 }
 
 // An s3 streamer
-function s3streamer(opts) {
-  var s3 = knox.createClient(opts),
-    headers = opts.headers || { 'x-amz-acl': 'public-read' }
+function s3streamer(s3, opts) {
+  var headers = (opts || {}).headers || { 'x-amz-acl': 'public-read' }
 
   return function (part, filename, callback) {
     headers['Content-Length'] = part.byteCount
