@@ -1,7 +1,7 @@
 multipart-pipe
 ==============
 
-Pipe multipart uploads direct to S3 or another file service in connect middleware.
+Pipe multipart uploads direct to S3 or another file service in connect middleware _without writing to disk_.
 
 It is tested and will be used in production.
 
