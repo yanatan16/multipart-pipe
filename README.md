@@ -45,6 +45,21 @@ The S3 options passed to `pipe.s3(s3opts, opts)` should look like normal `knox.c
 
 - `headers` - Optional object with default headers for each upload to S3. Defaults to enabling public-read.
 
+## Useful Things To Know
+
+- Limit upload size:
+
+    ```javascript
+    app.use(express.multipart({ defer: true, limit: '128mb' }))
+    ```
+
+- Limit content types (to say, just images):
+
+    ```javascript
+    app.use(pipe({
+      'content-type': /^image\/.*$/
+    }))
+
 # License
 
 MIT in LICENSE file.
