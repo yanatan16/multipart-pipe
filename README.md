@@ -32,6 +32,22 @@ app.use(express.multipart({ defer: true }))
 app.use(pipe.s3(s3))
 ```
 
+## Results
+
+In the request object after the pipe middleware will be a new `req.uploaded_files` field which will contain a map of filenames prior to upload to filenames on the streamed-to fileserver.
+
+For example:
+
+```javascript
+app.use('/upload', pipe.s3(s3))
+app.post('/upload', function (req, res) {
+  res.send({
+    ok: true,
+    uploaded_files: req.uploaded_files
+  })
+})
+```
+
 ## Options
 
 The main way to instantiate the middleware is `pipe(options)` where options contains the following:
