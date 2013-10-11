@@ -38,7 +38,7 @@ The main way to instantiate the middleware is `pipe(options)` where options cont
 
 - `streamer` - Required `function (part, filename, callback)`
   - Optionally call `pipe.s3(s3_knox_client, options)` to use built-in S3 streamer
-- `content-type` - Optional `String` or `RegExp` to test each part's content-type header for acceptability
+- `allow` - Optional `String` or `RegExp` to test each part's content-type header for acceptability
 - `filename` - Optional `function (part_filename)` which returns a filename to store. Defaults to `uuid.v4() + path.extname(part_filename)`
 
 ### S3 Options
@@ -59,17 +59,17 @@ When using `pipe.s3(s3_knox_client, opts)`, there are additional options:
 
     ```javascript
     app.use(pipe.s3(s3, {
-      'content-type': /^image\/.*$/
+      allow: /^image\/.*$/
     }))
     ```
 
-- Use uploaded filename with counter prepended:
+- Use uploaded filename with counter and a path parameter prepended:
 
     ```javascript
     var counter = 0;
     app.use(pipe.s3(s3, {
-      filename: function (fn) {
-        return (counter++) + '_' + fn
+      filename: function (fn, req) {
+        return req.params.prefix + '/' + (counter++) + '_' + fn
       }
     }))
     ```

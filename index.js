@@ -13,7 +13,7 @@ module.exports = pipe
 function pipe(options) {
   options = defaults(options)
 
-  var typetest = options['content-type'],
+  var typetest = options.allow,
     fngen = options.filename,
     streamer = options.streamer
 
@@ -30,7 +30,7 @@ function pipe(options) {
       })
       .on('part', function (part) {
         if (typetest.test(part.headers['content-type']) && part.filename) {
-          var filename = filenames[part.filename] = (filenames[part.filename] || fngen(part.filename))
+          var filename = filenames[part.filename] = (filenames[part.filename] || fngen(part.filename, req))
           refnext.incr();
 
           streamer(part, filename, function (err) {
@@ -62,7 +62,7 @@ pipe.s3 = function pipes3(s3, opts) {
 // Set default options
 function defaults(opts) {
   opts = opts || {}
-  opts['content-type'] = (function (ct) { return ct instanceof RegExp ? ct : new RegExp(ct || '.*') })(opts['content-type'])
+  opts.allow = (function (ct) { return ct instanceof RegExp ? ct : new RegExp(ct || '.*') })(opts.allow)
   opts.filename = opts.filename || function (fn) { return uuid.v4() + path.extname(fn) }
 
   if (!opts.streamer) {
