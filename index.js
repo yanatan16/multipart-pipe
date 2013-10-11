@@ -5,9 +5,7 @@
 var path = require('path')
 
 // vendor
-var connect = require('connect'),
-  uuid = require('uuid'),
-  _ = require('underscore'),
+var uuid = require('uuid'),
   knox = require('knox')
 
 module.exports = pipe
@@ -65,7 +63,7 @@ pipe.s3 = function pipes3(s3opts, opts) {
 // Set default options
 function defaults(opts) {
   opts = opts || {}
-  opts['content-type'] = (function (ct) { return _.isRegExp(ct) ? ct : new RegExp(ct || '.*') })(opts['content-type'])
+  opts['content-type'] = (function (ct) { return ct instanceof RegExp ? ct : new RegExp(ct || '.*') })(opts['content-type'])
   opts.filename = opts.filename || function (fn) { return uuid.v4() + path.extname(fn) }
 
   if (!opts.streamer) {
