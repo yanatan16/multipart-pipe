@@ -1,0 +1,17 @@
+{
+  "name": "multipart-pipe",
+  "version": "0.0.1",
+  "main": "index.js",
+  "author": "Jon Eisen <jon@joneisen.me>",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/yanatan16/multipart-pipe.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "underscore": "~1.5.2",
+    "uuid": "~1.4.1",
+    "connect": "~2.9.0",
+    "knox": "~0.8.6"
+  }
+}
