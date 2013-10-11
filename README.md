@@ -1,7 +1,9 @@
 multipart-pipe
 ==============
 
-Pipe multipart uploads direct to S3 or another file service in connect middleware
+Pipe multipart uploads direct to S3 or another file service in connect middleware.
+
+It is tested and will be used in production.
 
 ## Install
 
@@ -39,7 +41,7 @@ The main way to instantiate the middleware is `pipe(options)` where options cont
 
 ### S3 Options
 
-The S3 options passed to `pipe.s3(s3opts, opts)` should look like normal `knox.createClient(options)` with the addition of:
+The S3 options passed to `pipe.s3(s3opts, opts)` should look like normal `knox.createClient(options)` ([docs](https://github.com/LearnBoost/knox)) with the addition of:
 
 - `headers` - Optional object with default headers for each upload to S3. Defaults to enabling public-read.
 
