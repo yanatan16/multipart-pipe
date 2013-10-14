@@ -97,7 +97,7 @@ function s3streamer(s3, opts) {
 function Refcount(cb) {
   this.count = 0
   this.closed = false
-  this.cancel = false
+  this.canceled = false
   this.cb = cb
 }
 Refcount.prototype.incr = function () {
@@ -112,13 +112,13 @@ Refcount.prototype.close = function () {
   this.maybecall()
 }
 Refcount.prototype.cancel = function (err) {
-  if (!this.cancel) {
-    this.cancel = true
+  if (!this.canceled) {
+    this.canceled = true
     this.cb(err)
   }
 }
 Refcount.prototype.maybecall = function () {
-  if (!this.cancel && this.closed && this.count === 0) {
+  if (!this.canceled && this.closed && this.count === 0) {
     this.cb()
   }
 }
