@@ -5,6 +5,8 @@ Pipe multipart uploads direct to S3 or another file service in connect middlewar
 
 It is tested and soon to be used in production.
 
+_Note_: If you are coming from the 0.2.2 or below version, the API has changed because `express.multipart` is deprecated and no nice multipart middleware exists to replace it, this package had to replicate some of that functionality. Now the only middleware you apply is the one in this package, and two new options (encoding and byte limits) are added to support functionality lost from express to multiparty.
+
 ## Install
 
 ```
