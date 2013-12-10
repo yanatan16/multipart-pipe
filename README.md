@@ -16,7 +16,8 @@ npm install multipart-pipe
 ```javascript
 var pipe = require('multipart-pipe'),
   knox = require('knox'),
-  express = require('express')
+  express = require('express'),
+  multiparty = require('multiparty')
 
 var app = express(), /* or connect() */
   s3 = knox.createClient({
@@ -26,7 +27,7 @@ var app = express(), /* or connect() */
   })
 
 // This is very important
-app.use(express.multipart({ defer: true }))
+app.use(multiparty({ defer: true }))
 
 // Pipes to S3
 app.use(pipe.s3(s3))
