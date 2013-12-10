@@ -95,6 +95,19 @@ When using `pipe.s3(s3_knox_client, opts)`, there are additional options:
     }))
     ```
 
+- Find the right mime type extension for a filename. Referenced package: [mime](https://github.com/broofa/node-mime)
+
+    ```javascript
+    var mime = require('mime'),
+      path = require('path');
+
+    app.use(multipartPipe.s3(s3, {
+      filename: function (fn, contentType) {
+        return "some-directory/" + path.basename(fn).split('.')[0] + '.' + mime.extension(contentType);
+      }
+    }))
+    ```
+
 - Create your own streamer function
 
     ```javascript

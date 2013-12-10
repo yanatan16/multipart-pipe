@@ -1,9 +1,6 @@
 // multipart-pipe/index.js
 // Pipe multipart uploads to a file server without touching disk!
 
-// builtin
-var path = require('path')
-
 // vendor
 var multiparty = require('multiparty'),
   parseBytes = require('bytes');
@@ -16,8 +13,8 @@ function pipe(options) {
 
   var typetest = options.allow,
     fngen = options.filename,
-    limit = opts.limit,
-    encoding = opts.encoding,
+    limit = options.limit,
+    encoding = options.encoding,
     streamer = options.streamer
 
   return function (req, res, next) {
@@ -28,12 +25,12 @@ function pipe(options) {
 
     form.on('field', function (name, value) {
       req.form[name] = value;
-    });
+    })
 
     .on('part', function (part) {
       if (!part.filename) return; // Not a file
       if (!typetest.test(part.headers['content-type'])) return; // not allowed by user
-      if (opts.limit && (form.bytesReceived > limit || form.bytesExpected > limit)) {
+      if (limit && (form.bytesReceived > limit || form.bytesExpected > limit)) {
         req.abort();
         return refnext.cancel(new Error('Byte Limit exceeded'), 413)
       }
