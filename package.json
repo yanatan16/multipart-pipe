@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "uuid": "~1.4.1"
+    "multiparty": "~3.1.0",
+    "bytes": "~0.2.1"
   }
 }

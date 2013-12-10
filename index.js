@@ -5,7 +5,8 @@
 var path = require('path')
 
 // vendor
-var uuid = require('uuid')
+var multiparty = require('multiparty'),
+  parseBytes = require('bytes');
 
 module.exports = pipe
 
@@ -15,40 +16,50 @@ function pipe(options) {
 
   var typetest = options.allow,
     fngen = options.filename,
+    limit = opts.limit,
+    encoding = opts.encoding,
     streamer = options.streamer
 
   return function (req, res, next) {
-    if (req.form) {
-      var filenames = {},
-        refnext = new Refcount(next)
+    req.form = {};
+    req.files = {};
+    var form = new multiparty.Form({encoding: encoding}),
+      refnext = new Refcount(next);
 
-      req.uploaded_files = {}
+    form.on('field', function (name, value) {
+      req.form[name] = value;
+    });
 
-      req.form.on('error', function (err) {
-        err.status = 400
-        refnext.cancel(err)
-      })
-      .on('part', function (part) {
-        if (typetest.test(part.headers['content-type']) && part.filename) {
-          var filename = filenames[part.filename] = (filenames[part.filename] || fngen(part.filename, req))
-          refnext.incr();
+    .on('part', function (part) {
+      if (!part.filename) return; // Not a file
+      if (!typetest.test(part.headers['content-type'])) return; // not allowed by user
+      if (opts.limit && (form.bytesReceived > limit || form.bytesExpected > limit)) {
+        req.abort();
+        return refnext.cancel(new Error('Byte Limit exceeded'), 413)
+      }
 
-          streamer(part, filename, function (err) {
-            if (err) {
-              err.status = 500
-              return refnext.cancel(err)
-            }
-            req.uploaded_files[part.filename] = filename;
-            refnext.decr()
-          })
+      var filename = fngen(part.filename, part.headers['content-type']);
+      refnext.incr();
+
+      streamer(part, filename, function (err) {
+        if (err) {
+          return refnext.cancel(err, 500);
         }
-      })
-      .on('close', function () {
-        refnext.close()
-      })
-    } else {
-      next()
-    }
+
+        req.files[part.filename] = filename;
+        refnext.decr();
+      });
+    })
+
+    .on('close', function () {
+      refnext.close();
+    })
+
+    .on('error', function (err) {
+      refnext.cancel(err, 400);
+    })
+
+    .parse(req);
   }
 }
 
@@ -62,11 +73,18 @@ pipe.s3 = function pipes3(s3, opts) {
 // Set default options
 function defaults(opts) {
   opts = opts || {}
-  opts.allow = (function (ct) { return ct instanceof RegExp ? ct : new RegExp(ct || '.*') })(opts.allow)
-  opts.filename = opts.filename || function (fn) { return uuid.v4() + path.extname(fn) }
 
   if (!opts.streamer) {
     throw new Error('No streamer found. Must pass a streamer to multipart-pipe')
+  }
+
+  opts.encoding = opts.encoding || 'utf8';
+  opts.limit = opts.limit === undefined ? '128mb' : opts.limit;
+  opts.limit = typeof opts.limit === 'string' ? parseBytes(opts.limit) : opts.limit;
+  opts.allow = opts.allow instanceof RegExp ? opts.allow : new RegExp(opts.allow || '.*');
+
+  if (!opts.filename || typeof opts.filename !== 'function') {
+    opts.filename = function (filename, mime) { return filename; };
   }
 
   return opts
@@ -111,9 +129,12 @@ Refcount.prototype.close = function () {
   this.closed = true
   this.maybecall()
 }
-Refcount.prototype.cancel = function (err) {
+Refcount.prototype.cancel = function (err, code) {
   if (!this.canceled) {
     this.canceled = true
+    if (code && err) {
+      err.code = err
+    }
     this.cb(err)
   }
 }
