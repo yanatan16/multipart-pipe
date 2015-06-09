@@ -2,11 +2,10 @@
 // Pipe multipart uploads to a file server without touching disk!
 
 // vendor
-var multiparty = require('multiparty'),
+var Busboy = require('busboy'),
   parseBytes = require('bytes');
 
 module.exports = pipe
-
 
 function pipe(options) {
   options = defaults(options)
@@ -14,49 +13,46 @@ function pipe(options) {
   var typetest = options.allow,
     fngen = options.filename,
     limit = options.limit,
-    encoding = options.encoding,
     streamer = options.streamer
 
   return function (req, res, next) {
-    req.form = {};
-    req.files = {};
-    var form = new multiparty.Form({encoding: encoding}),
-      refnext = new Refcount(next);
+    if (req.method !== 'POST')
+      return callnext()
 
-    form.on('field', function (name, value) {
+    req.form = {}
+    req.files = {}
+
+    var refnext = new Refcount(next)
+
+    var busboy = new Busboy({ headers: req.headers, limits: {fileSize: limit} })
+    busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
+      if (!filename || !file)
+        return
+      if (!typetest.test(mimetype)) return; // not allowed by user
+
+      refnext.incr()
+
+      var fn = fngen(filename, mimetype, req)
+      streamer(file, fn, mimetype, encoding, function (err) {
+        if (err) {
+          refnext.cancel(err, 500)
+        }
+
+        req.files[filename] = fn
+        refnext.decr()
+      })
+    })
+
+    busboy.on('field', function (name, value) {
       req.form[name] = value;
     })
 
-    .on('part', function (part) {
-      if (!part.filename) return; // Not a file
-      if (!typetest.test(part.headers['content-type'])) return; // not allowed by user
-      if (limit && (form.bytesReceived > limit || form.bytesExpected > limit)) {
-        req.abort();
-        return refnext.cancel(new Error('Byte Limit exceeded'), 413)
-      }
-
-      var filename = fngen(part.filename, part.headers['content-type']);
-      refnext.incr();
-
-      streamer(part, filename, function (err) {
-        if (err) {
-          return refnext.cancel(err, 500);
-        }
-
-        req.files[part.filename] = filename;
-        refnext.decr();
-      });
+    busboy.on('finish', function() {
+      res.set('Connection', 'close')
+      refnext.close()
     })
 
-    .on('close', function () {
-      refnext.close();
-    })
-
-    .on('error', function (err) {
-      refnext.cancel(err, 400);
-    })
-
-    .parse(req);
+    req.pipe(busboy)
   }
 }
 
@@ -75,7 +71,6 @@ function defaults(opts) {
     throw new Error('No streamer found. Must pass a streamer to multipart-pipe')
   }
 
-  opts.encoding = opts.encoding || 'utf8';
   opts.limit = opts.limit === undefined ? '128mb' : opts.limit;
   opts.limit = typeof opts.limit === 'string' ? parseBytes(opts.limit) : opts.limit;
   opts.allow = opts.allow instanceof RegExp ? opts.allow : new RegExp(opts.allow || '.*');
@@ -89,19 +84,24 @@ function defaults(opts) {
 
 // An s3 streamer
 function s3streamer(s3, opts) {
-  var headers = (opts || {}).headers || { 'x-amz-acl': 'public-read' }
+  var headers = (opts || {}).headers || { }
 
-  return function (part, filename, callback) {
-    headers['Content-Length'] = part.byteCount
-    headers['Content-Type'] = part.headers['content-type']
-    s3.putStream(part, filename, headers, function (err, s3resp) {
-      if (err) {
-        return callback(err)
-      } else if (s3resp.statusCode < 200 || s3resp.statusCode > 299) {
-        return callback(new Error('Error uploading to s3: ' + s3resp.statusCode), s3resp)
-      }
-      s3resp.resume() // This finalizes the stream response
-      callback()
+  return function (file, filename, mimetype, encoding, callback) {
+    headers['Content-Type'] = mimetype
+    var buf = Buffer(0)
+    file.on('data', function (chunk) {
+      buf = Buffer.concat([buf, chunk])
+    })
+    file.on('end', function () {
+      s3.putBuffer(buf, filename, headers, function (err, s3resp) {
+        if (err) {
+          return callback(err)
+        } else if (s3resp.statusCode < 200 || s3resp.statusCode > 299) {
+          return callback(new Error('Error uploading to s3: ' + s3resp.statusCode), s3resp)
+        }
+        s3resp.resume() // This finalizes the stream response
+        callback()
+      })
     })
   }
 }
